@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 from langchain.chat_models import init_chat_model
 from config import MODEL  # the model name lives in config.py
 
-# Reads your API key from the .env file so you don't hardcode it.
+# Reads API key from the .env file so you don't hardcode it.
 load_dotenv()
 
 # One line to create a chat model. To switch providers, edit MODEL in config.py.
