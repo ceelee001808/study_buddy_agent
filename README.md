@@ -1,153 +1,100 @@
-# Study Buddy: A Beginner LangChain Project
+# Study Buddy
 
-You'll build an AI study assistant in 5 small steps. Each step is its own file,
-so you can run them one at a time and see exactly what each new idea adds.
+An AI study assistant that runs in the terminal. Study Buddy explains concepts, quizzes the user, solves math problems, defines vocabulary, and generates flashcards that are saved to a file, while keeping track of the conversation so follow-up questions work naturally.
 
-| File | What you learn |
+Built with **Python**, **LangChain 1.x**, **LangGraph**, and the **Google Gemini API**.
+
+## Features
+
+- **Tool-using AI agent.** The language model decides for itself when to call Python functions, choosing from three tools:
+  - `calculate` evaluates math expressions
+  - `make_flashcard` creates a flashcard and appends it to `flashcards.txt`
+  - `define_word` returns a dictionary-style entry for a vocabulary term
+- **Conversation memory.** Context carries across turns ("make a flashcard on my topic" knows what the topic is), and separate conversation threads stay isolated from each other.
+- **Configurable personality.** The assistant can act as a friendly tutor, a pirate, or a strict professor, set by a single variable.
+- **Provider-agnostic design.** The model is defined in one place (`config.py`), so the app can switch between Gemini, Claude, or GPT without code changes elsewhere.
+- **Secure configuration.** API keys are loaded from environment variables and excluded from version control.
+
+## Demo
+
+<!-- Replace with a screenshot of the app running -->
+
+```text
+Study Buddy (friendly mode) is ready! Type 'quit' to exit.
+Flashcards are saved to flashcards.txt
+
+You: I'm studying the French Revolution. Make a flashcard for "Estates-General".
+Buddy: Here's your flashcard, and it's been saved to flashcards.txt.
+FRONT: Estates-General
+BACK: France's assembly of the three estates (clergy, nobility, commoners),
+      whose 1789 meeting helped spark the French Revolution.
+
+You: What's 17.5% of 380?
+Buddy: 17.5% of 380 is 66.5.
+
+You: What topic am I studying again?
+Buddy: You're studying the French Revolution!
+```
+
+## How It Works
+
+```mermaid
+flowchart LR
+    U[User input] --> A[LangChain agent]
+    A <--> M[Gemini LLM]
+    A --> T1[calculate]
+    A --> T2[make_flashcard]
+    A --> T3[define_word]
+    T2 --> F[(flashcards.txt)]
+    A <--> C[(Conversation memory)]
+    A --> R[Response]
+```
+
+At the core is a LangChain agent created with `create_agent`. Each Python function is registered as a tool, and its docstring and type hints tell the model what the tool does and what arguments it takes. When a message comes in, the agent runs a reasoning loop: the model decides whether a tool is needed, the tool runs, its result is fed back to the model, and the loop continues until the model produces a final answer.
+
+Conversation memory is handled by a LangGraph checkpointer (`InMemorySaver`), which stores message history keyed by a thread ID. This lets the assistant resolve references to earlier messages while keeping different sessions separate.
+
+## Project Structure
+
+The project is organized as a progression, with each file introducing one core concept of LLM application development and the last file combining them into the finished app.
+
+| File | Description |
 |---|---|
-| `config.py` | Where the model name is set (shared by every step) |
-| `step1_basic_call.py` | Sending a message to a model |
-| `step2_prompt_chain.py` | Prompt templates and the `|` pipe (chains) |
-| `step3_agent_tools.py` | Agents that call your Python functions (tools) |
-| `step4_memory.py` | Remembering the conversation (threads) |
-| `step5_chat_app.py` | The finished app: an interactive chat in your terminal |
+| `step5_chat_app.py` | **Main application:** interactive chat with tools, memory, personas, and file output |
+| `step1_basic_call.py` | Minimal model call through LangChain's provider-agnostic interface |
+| `step2_prompt_chain.py` | Reusable prompt templates composed into a chain (`prompt \| model \| parser`) |
+| `step3_agent_tools.py` | Tool-calling agent that prints each step of its reasoning loop |
+| `step4_memory.py` | Demonstration of conversation memory and thread isolation |
+| `config.py` | Model and provider selection |
 
----
+## Tech Stack
 
-## Part A: One-time setup (about 10 minutes)
+| Area | Tools |
+|---|---|
+| Language | Python 3.10+ |
+| LLM framework | LangChain 1.x, LangGraph |
+| Model | Google Gemini (swappable for Claude or GPT) |
+| Configuration | python-dotenv |
 
-### 1. Install the tools
-- **Python 3.10 or newer**: https://www.python.org/downloads/
-  (On Windows, tick **"Add Python to PATH"** during install.)
-- **VS Code**: https://code.visualstudio.com/
-- In VS Code, open the Extensions panel (the four-squares icon on the left),
-  search **"Python"**, and install the one published by Microsoft.
+## Running Locally
 
-### 2. Get a FREE API key (Google Gemini)
-1. Go to https://aistudio.google.com/apikey and sign in with a Google account.
-2. Click **Create API key** and copy it somewhere safe.
-3. No credit card needed. The free tier is rate-limited, which is fine for learning.
+Requires Python 3.10+ and a free API key from [Google AI Studio](https://aistudio.google.com/apikey).
 
-> Heads up: on Google's free tier, your prompts may be used to improve Google's products,
-> so don't type anything private into the app.
-
-### 3. Open the project in VS Code
-1. Unzip `study-buddy.zip`.
-2. In VS Code: **File > Open Folder...** and pick the `study-buddy` folder.
-
-### 4. Open the terminal
-**Terminal > New Terminal** (or press Ctrl+` ). A panel opens at the bottom.
-Every command below gets typed there.
-
-### 5. Create a virtual environment
-A "venv" keeps this project's packages separate from everything else.
-
-Mac / Linux:
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate
-```
-
-Windows (PowerShell):
-```powershell
-python -m venv .venv
-.venv\Scripts\Activate.ps1
-```
-
-You'll know it worked when you see `(.venv)` at the start of the terminal line.
-
-> Windows error about "running scripts is disabled"? Run this once, then try again:
-> `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`
-
-If VS Code pops up asking "select this environment for the workspace?", click **Yes**.
-Otherwise press Ctrl+Shift+P, type **Python: Select Interpreter**, and choose the one with `.venv`.
-
-### 6. Install the packages
-```bash
+git clone https://github.com/YOUR-USERNAME/study-buddy.git && cd study-buddy
+python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
+cp .env.example .env   # add your GOOGLE_API_KEY
+python3 step5_chat_app.py
 ```
 
-### 7. Add your API key
-1. In the file list on the left, right-click `.env.example` > **Copy**, then **Paste**.
-2. Rename the copy to exactly `.env`
-3. Open `.env` and replace `your-key-here` with your real key. Save.
+## Future Improvements
 
-> Never share `.env` or upload it to GitHub. The included `.gitignore` already hides it.
+- Retrieval-augmented generation (RAG) to answer questions from the user's own notes and PDFs
+- A web interface using Streamlit
+- Persistent memory backed by SQLite
+- A safe math parser in place of Python's `eval`
 
----
+## License
 
-## Part B: Run each step
-
-Run each file from the terminal (with `(.venv)` showing), in order.
-You can also open a file and click the play button in the top-right corner.
-
-### Step 1: Talk to a model
-```bash
-python step1_basic_call.py
-```
-**Expected:** `MODEL SAYS:` followed by one sentence about photosynthesis.
-**Key idea:** `init_chat_model(...)` creates a model; `.invoke()` sends a message.
-
-### Step 2: Prompt template + chain
-```bash
-python step2_prompt_chain.py
-```
-**Expected:** Two explanations of gravity, one simple and one more advanced.
-**Key idea:** `prompt | model | parser` pipes data left to right. One template, many inputs.
-
-### Step 3: Agent with tools
-```bash
-python step3_agent_tools.py
-```
-**Expected:** A step-by-step printout showing:
-1. Your question (Human Message)
-2. The model deciding to call `calculate` (Ai Message with a tool call)
-3. The result `36.0` (Tool Message)
-4. The model calling `make_flashcard` (Ai Message)
-5. The flashcard text (Tool Message)
-6. The final answer
-
-The exact wording and order may vary a little each run. That's normal: the model decides.
-**Key idea:** The model reads your function docstrings and chooses when to call them.
-
-### Step 4: Memory
-```bash
-python step4_memory.py
-```
-**Expected:**
-- Thread 1 remembers you're studying cell biology and makes a flashcard about it.
-- Thread 2 says it doesn't know your topic, because it's a separate conversation.
-
-**Key idea:** A `checkpointer` stores history; the `thread_id` picks which conversation.
-
-### Step 5: The finished app
-```bash
-python step5_chat_app.py
-```
-Chat with it! Things to try:
-- `I'm studying the French Revolution. Give me a 3-question quiz.`
-- `What's 17.5% of 380?`
-- `Make flashcards for the three terms you just quizzed me on.`
-- `quit` to exit
-
----
-
-## Troubleshooting
-
-| Problem | Fix |
-|---|---|
-| `ModuleNotFoundError` | Your venv isn't active. Re-run the activate command from Part A step 5, then `pip install -r requirements.txt`. |
-| Authentication / API key error | Check the file is named exactly `.env` (not `.env.txt`), is in the `study-buddy` folder, and has your real key with no quotes or spaces. |
-| `429` / "quota exceeded" / "resource exhausted" | You hit the free tier's rate limit. Wait a minute and try again. |
-| Model not found error | Free models change over time. Check which models are free in Google AI Studio, then update `MODEL` in `config.py`. |
-| `python` not found (Mac) | Use `python3` instead. |
-
-## Using a different provider
-The model name lives in ONE place: `config.py`. To switch, e.g. to Claude (paid):
-`pip install "langchain[anthropic]"`, put `ANTHROPIC_API_KEY=...` in `.env`,
-and set `MODEL = "anthropic:claude-sonnet-4-5"` in `config.py`.
-
-## Challenges once it all works
-1. Add a third tool, e.g. `define_word(word: str) -> str` that returns a fake dictionary entry.
-2. Change the system prompt in step 5 to make the buddy talk like a pirate, then a strict professor.
-3. Make step 5 save every flashcard to a `flashcards.txt` file.
+MIT. See [LICENSE](LICENSE).
